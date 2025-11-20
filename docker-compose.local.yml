@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:6.0.9-alpine
+    container_name: high_stakes_redis
+    ports:
+      - "6379:6379"
+    restart: always
+    networks:
+      - high_stakes
+
+  postgresql:
+    image: postgres:12-alpine
+    container_name: high_stakes_postgres
+    ports:
+      - "5432:5432"
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=high_stakes
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    networks:
+      - high_stakes
+
+networks:
+  high_stakes:
+    driver: bridge
