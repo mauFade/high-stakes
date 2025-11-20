@@ -2,7 +2,7 @@ include .env
 
 MIGRATION_NAME ?= unnamed_migration
 
-.PHONY: create_migration migrate_up migrate_down local local-down local-logs help
+.PHONY: create_migration migrate_up migrate_down local local-down local-logs dev run build test clean help
 
 create_migration:
 	migrate create -ext=sql -dir=internal/adapter/repository/postgres/migrations -seq $(MIGRATION_NAME)
@@ -27,11 +27,22 @@ local-down:
 local-logs:
 	docker compose -f docker-compose.local.yml logs -f
 
+dev:
+	@echo "Starting development server with hot reload (Air)..."
+	@AIR_BIN=$$(go env GOPATH)/bin/air; \
+	if [ ! -f "$$AIR_BIN" ]; then \
+		echo "Error: Air is not installed. Run: go install github.com/air-verse/air@latest"; \
+		exit 1; \
+	fi; \
+	$$AIR_BIN
+
 run:
+	@echo "Running application (no hot reload)..."
 	go run ./cmd/http/main.go
 
 build:
-	go build ./cmd/api/main.go
+	@echo "Building binary..."
+	go build -o bin/http ./cmd/http/main.go
 
 test:
 	go test -cover ./...

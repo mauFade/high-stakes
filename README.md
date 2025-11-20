@@ -50,16 +50,23 @@ A clean architecture REST API built with Go, using standard library packages for
 
 2. **Install development tools:**
    ```bash
-   # Install Air for hot reloading
+   # Install Air for hot reloading (required for make dev)
    go install github.com/air-verse/air@latest
    
    # Install golang-migrate for database migrations
    go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
    ```
+   
+   **Note:** After installing Air, make sure `~/go/bin` (or `$GOPATH/bin`) is in your PATH. If not, you can add it to your shell profile:
+   ```bash
+   echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> ~/.bashrc
+   source ~/.bashrc
+   ```
 
 3. **Set up environment variables:**
    Create a `.env` file in the root directory. If using Docker Compose (recommended for local development), use these values:
    ```env
+   PORT=8080
    DB_HOST=localhost
    DB_PORT=5432
    DB_USER=postgres
@@ -103,25 +110,35 @@ A clean architecture REST API built with Go, using standard library packages for
 
 ## Development
 
-### Using Air (Hot Reload)
+### Using Air (Hot Reload) - Recommended
 
-Air provides automatic code reloading during development. Simply run:
+The easiest way to develop with hot reload is using the Makefile:
 
+```bash
+make dev
+```
+
+This command:
+- Starts Air with hot reloading enabled
+- Watches for changes in `.go` files
+- Automatically rebuilds and restarts the server on file changes
+- Loads your `.env` file automatically
+- Displays colored logs for different components
+- Stores build artifacts in the `tmp/` directory
+
+**Prerequisites:** Make sure Air is installed (see Setup step 2) before running `make dev`.
+
+**Alternative:** You can also run Air directly:
 ```bash
 air
 ```
-
-Air will:
-- Watch for changes in `.go` files
-- Automatically rebuild and restart the server
-- Display colored logs for different components
-- Store build artifacts in the `tmp/` directory
 
 The Air configuration is in `.air.toml`. You can customize:
 - Build command
 - Environment variables
 - File watching patterns
 - Log output
+- Excluded directories (e.g., `pgdata`, `bin`, `docs`)
 
 ### Using Makefile
 
@@ -146,7 +163,10 @@ make help
 #### Running the Application
 
 ```bash
-# Run the application directly
+# Start development server with hot reload (recommended)
+make dev
+
+# Run the application without hot reload
 make run
 
 # Build the binary
@@ -155,6 +175,12 @@ make build
 # Run tests with coverage
 make test
 ```
+
+**Development Workflow:**
+1. Start Docker services: `make local`
+2. Run migrations: `make migrate_up`
+3. Start development server: `make dev`
+4. Make code changes - Air will automatically rebuild and restart!
 
 #### Docker Development
 
@@ -186,27 +212,20 @@ Make sure your `.env` file matches these credentials for migrations and the appl
 make clean
 ```
 
-**Note:** The Makefile references `./cmd/api/main.go`, but the actual entry point is `./cmd/http/main.go`. Update the Makefile if needed, or use Air for development.
-
 ### Manual Server Execution
 
-Run the server manually:
+**Note:** For development, use `make dev` instead (see above). This section is for reference only.
+
+The application reads all configuration from the `.env` file. To run manually:
 
 ```bash
 go run cmd/http/main.go
 ```
 
-Or with custom configuration:
-```bash
-go run cmd/http/main.go \
-  -port=8080 \
-  -db-host=localhost \
-  -db-port=5432 \
-  -db-user=postgres \
-  -db-password=yourpassword \
-  -db-name=high_stakes \
-  -db-sslmode=disable
-```
+The server will automatically:
+- Load environment variables from `.env` file
+- Connect to the database using `DB_*` environment variables
+- Start on the port specified in `PORT` (default: 8080)
 
 ### Building the Binary
 
@@ -342,13 +361,14 @@ Air is configured via `.air.toml` with the following settings:
 
 | Command | Description |
 |---------|-------------|
+| `make dev` | Start development server with hot reload (Air) - **Recommended for development** |
 | `make create_migration MIGRATION_NAME=name` | Create a new database migration |
 | `make migrate_up` | Run all pending migrations |
 | `make migrate_down` | Rollback the last migration |
 | `make local` | Start Docker Compose environment (PostgreSQL + Redis) |
 | `make local-down` | Stop Docker Compose containers |
 | `make local-logs` | View Docker Compose logs |
-| `make run` | Run the application |
+| `make run` | Run the application (no hot reload) |
 | `make build` | Build the binary |
 | `make test` | Run tests with coverage |
 | `make clean` | Clean Docker system |

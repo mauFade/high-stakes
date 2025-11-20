@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"time"
 
 	"github.com/mauFade/high-stakes/internal/core/domain"
@@ -10,37 +9,42 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type userService struct {
+type UserService struct {
 	userRepo port.UserRepository
 }
 
 // NewUserService creates a new user service
-func NewUserService(userRepo port.UserRepository) port.UserService {
-	return &userService{
+func NewUserService(userRepo port.UserRepository) *UserService {
+	return &UserService{
 		userRepo: userRepo,
 	}
 }
 
 // CreateUser creates a new user
-func (s *userService) CreateUser(name, email, phone, password string) (*domain.User, error) {
+func (s *UserService) CreateUser(name, email, phone, password string) (*domain.User, error) {
 	// Validate input
 	if name == "" {
-		return nil, errors.New("name is required")
+		return nil, domain.ErrNameRequired
 	}
 	if email == "" {
-		return nil, errors.New("email is required")
+		return nil, domain.ErrEmailRequired
 	}
 	if phone == "" {
-		return nil, errors.New("phone is required")
+		return nil, domain.ErrPhoneRequired
 	}
 	if password == "" {
-		return nil, errors.New("password is required")
+		return nil, domain.ErrPasswordRequired
+	}
+
+	// Validate phone number
+	if !util.ValidatePhone(phone) {
+		return nil, domain.ErrInvalidPhone
 	}
 
 	// Check if user with email already exists
 	existing, _ := s.userRepo.GetByEmail(email)
 	if existing != nil {
-		return nil, errors.New("user with this email already exists")
+		return nil, domain.ErrUserAlreadyExists
 	}
 
 	// Hash password
@@ -72,97 +76,3 @@ func (s *userService) CreateUser(name, email, phone, password string) (*domain.U
 
 	return user, nil
 }
-
-// GetUserByID retrieves a user by ID
-func (s *userService) GetUserByID(id string) (*domain.User, error) {
-	if id == "" {
-		return nil, errors.New("id is required")
-	}
-
-	user, err := s.userRepo.GetByID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
-// GetUserByEmail retrieves a user by email
-func (s *userService) GetUserByEmail(email string) (*domain.User, error) {
-	if email == "" {
-		return nil, errors.New("email is required")
-	}
-
-	user, err := s.userRepo.GetByEmail(email)
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
-// UpdateUser updates user information
-func (s *userService) UpdateUser(id, name, email, phone string) (*domain.User, error) {
-	if id == "" {
-		return nil, errors.New("id is required")
-	}
-
-	// Get existing user
-	user, err := s.userRepo.GetByID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	// Update fields if provided
-	if name != "" {
-		user.Name = name
-	}
-	if email != "" {
-		// Check if email is already taken by another user
-		existing, _ := s.userRepo.GetByEmail(email)
-		if existing != nil && existing.ID != id {
-			return nil, errors.New("email is already taken")
-		}
-		user.Email = email
-	}
-	if phone != "" {
-		user.Phone = phone
-	}
-
-	user.UpdatedAt = time.Now()
-
-	if err := s.userRepo.Update(user); err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
-// DeleteUser deletes a user
-func (s *userService) DeleteUser(id string) error {
-	if id == "" {
-		return errors.New("id is required")
-	}
-
-	// Check if user exists
-	_, err := s.userRepo.GetByID(id)
-	if err != nil {
-		return err
-	}
-
-	return s.userRepo.Delete(id)
-}
-
-// ListUsers retrieves a list of users with pagination
-func (s *userService) ListUsers(limit, offset int) ([]*domain.User, error) {
-	if limit <= 0 {
-		limit = 10 // Default limit
-	}
-	if offset < 0 {
-		offset = 0
-	}
-
-	return s.userRepo.List(limit, offset)
-}
-
-

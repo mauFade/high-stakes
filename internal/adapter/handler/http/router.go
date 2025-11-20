@@ -1,9 +1,11 @@
 package http
 
 import (
+	"log"
 	"net/http"
 
-	"github.com/mauFade/high-stakes/internal/core/port"
+	"github.com/go-chi/chi/v5"
+	"github.com/mauFade/high-stakes/internal/core/service"
 )
 
 // Router sets up HTTP routes
@@ -11,61 +13,35 @@ type Router struct {
 	userHandler *userHandler
 }
 
-// NewRouter creates a new router with all handlers
-func NewRouter(userService port.UserService) *Router {
-	return &Router{
-		userHandler: NewUserHandler(userService),
+// Server represents the HTTP server
+type Server struct {
+	router      *chi.Mux
+	server      *http.Server
+	userService *service.UserService
+	port        string
+}
+
+// NewServer creates a new HTTP server
+func NewServer(us *service.UserService, p string) *Server {
+	return &Server{
+		router:      chi.NewRouter(),
+		userService: us,
+		port:        p,
 	}
 }
 
 // SetupRoutes configures all HTTP routes
-func (r *Router) SetupRoutes() *http.ServeMux {
-	mux := http.NewServeMux()
+func (s *Server) SetupRoutes() {
+	userHandler := NewUserHandler(s.userService)
 
-	// User routes
-	mux.HandleFunc("/users", r.handleUsers)
-	mux.HandleFunc("/users/", r.handleUserByID)
-
-	// Health check
-	mux.HandleFunc("/health", r.handleHealth)
-
-	return mux
+	s.router.Post("/users", userHandler.CreateUser)
 }
 
-// handleUsers routes requests to /users
-func (r *Router) handleUsers(w http.ResponseWriter, req *http.Request) {
-	switch req.Method {
-	case http.MethodGet:
-		r.userHandler.ListUsers(w, req)
-	case http.MethodPost:
-		r.userHandler.CreateUser(w, req)
-	default:
-		respondError(w, http.StatusMethodNotAllowed, "method not allowed")
+func (s *Server) Start() error {
+	s.server = &http.Server{
+		Addr:    ":" + s.port,
+		Handler: s.router,
 	}
+	log.Println("HTTP server running at " + s.port)
+	return s.server.ListenAndServe()
 }
-
-// handleUserByID routes requests to /users/:id
-func (r *Router) handleUserByID(w http.ResponseWriter, req *http.Request) {
-	switch req.Method {
-	case http.MethodGet:
-		r.userHandler.GetUser(w, req)
-	case http.MethodPut:
-		r.userHandler.UpdateUser(w, req)
-	case http.MethodDelete:
-		r.userHandler.DeleteUser(w, req)
-	default:
-		respondError(w, http.StatusMethodNotAllowed, "method not allowed")
-	}
-}
-
-// handleHealth handles health check requests
-func (r *Router) handleHealth(w http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodGet {
-		respondError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-
-	respondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-}
-
-
