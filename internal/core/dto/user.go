@@ -14,3 +14,9 @@ type UpdateUserRequest struct {
 	Email string `json:"email"`
 	Phone string `json:"phone"`
 }
+
+// AuthenticateRequest represents the request body for authenticating a user
+type AuthenticateRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}

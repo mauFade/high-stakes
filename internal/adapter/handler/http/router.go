@@ -8,11 +8,6 @@ import (
 	"github.com/mauFade/high-stakes/internal/core/service"
 )
 
-// Router sets up HTTP routes
-type Router struct {
-	userHandler *userHandler
-}
-
 // Server represents the HTTP server
 type Server struct {
 	router      *chi.Mux
@@ -34,7 +29,8 @@ func NewServer(us *service.UserService, p string) *Server {
 func (s *Server) SetupRoutes() {
 	userHandler := NewUserHandler(s.userService)
 
-	s.router.Post("/users", userHandler.CreateUser)
+	s.router.Post("/api/users", userHandler.CreateUser)
+	s.router.Post("/api/auth/login", userHandler.Authenticate)
 }
 
 func (s *Server) Start() error {
